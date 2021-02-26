@@ -158,9 +158,9 @@ $(document).ready(function() {
                 Math.floor(x * widthScale),
                 Math.floor(y / scale),
                 Math.floor(w * widthScale),
-                Math.floor(h / scale)
+                Math.floor(h / scale),
+                mainImgWidth
             ].join(',');
-            debugger;
             document.location.href = 'manualAnnotation.jsp' + document.location.search.replace(/bbox=[^&]+/, '') + '&bbox=' + bbox;
         } else {
             boxStart = [ev.offsetX, ev.offsetY];
@@ -255,11 +255,12 @@ try{
 	    ma = ft.getMediaAsset();
 	    ft.getParametersAsString();
 	    if (ft.getParameters() != null) {
-	        xywh = new int[4];
+	        xywh = new int[5];
 	        xywh[0] = (int)Math.round(ft.getParameters().optDouble("x", 10.0));
 	        xywh[1] = (int)Math.round(ft.getParameters().optDouble("y", 10.0));
 	        xywh[2] = (int)Math.round(ft.getParameters().optDouble("width", 100.0));
 	        xywh[3] = (int)Math.round(ft.getParameters().optDouble("height", 100.0));
+          xywh[4] = (int)Math.round(ft.getParameters().optDouble("totalWidth", 700));
 	    }
 	}
 
@@ -293,8 +294,8 @@ try{
 
 	if (bbox != null) {
 	    String[] parts = bbox.split(",");
-	    if (parts.length == 4) {
-	        xywh = new int[4];
+	    if (parts.length >= 4) {
+	        xywh = new int[5];
 	        try {
 	            for (int i = 0 ; i < parts.length ; i++) {
 	                int n = Integer.parseInt(parts[i]);
@@ -351,19 +352,11 @@ try{
         }
 
         function drawFeature(imgEl, ft) {
-          console.log("deleteMe drawFeature entered");
             if (!imgEl || !ft || !ft.parameters || (ft.type != 'org.ecocean.boundingBox')) return;
             let f = $('<div title="' + ft.id + '" id="feature-' + ft.id + '" class="featurebox" />');
             let scale = imgEl.height / imgEl.naturalHeight;
-            console.log("deleteMe imgEl.width is: " + imgEl.width);
-            console.log("deleteMe imgEl.naturalWidth is: " + imgEl.naturalWidth);
-            console.log("deleteMe scale in drawFeature is: " + scale);
             let widthScale = imgEl.width / imgEl.naturalWidth;
-            console.log("deleteMe width is: " + ft.parameters.width);
-            console.log("deleteMe x is: " + ft.parameters.x);
-            console.log("deleteMe widthScale in drawFeature is: " + widthScale);
             // console.info('mmmm scale=%f (ht=%d/%d)', scale, imgEl.height, imgEl.naturalHeight);
-            // if (scale == 1) return;
             imgEl.setAttribute('data-feature-drawn', true);
             f.css('width', (ft.parameters.width * widthScale) + 'px');
             f.css('height', (ft.parameters.height * scale) + 'px');
@@ -372,6 +365,7 @@ try{
             if (ft.parameters.theta) f.css('transform', 'rotate(' +  ft.parameters.theta + 'rad)');
 //console.info('mmmm %o', f);
             $(imgEl).parent().append(f);
+            // $('bbox').css('width', <%=xywh[2]%> * widthScale);
         }
 	</script></p>
 
@@ -408,6 +402,7 @@ try{
 	    fparams.put("y", xywh[1]);
 	    fparams.put("width", xywh[2]);
 	    fparams.put("height", xywh[3]);
+      fparams.put("totalWidth", xywh[4]);
 	    fparams.put("_manualAnnotation", System.currentTimeMillis());
 	    ft = new Feature("org.ecocean.boundingBox", fparams);
 	    ma.addFeature(ft);
@@ -505,7 +500,17 @@ try{
 		    <div class="axis" id="x-axis"></div>
 		    <div class="axis" id="y-axis"></div>
 		    <img class="asset" src="<%=ma.webURL()%>" id="main-img" onLoad="drawFeatures()" />
-		    <div style="left: <%=(xywh[0] * scale)%>px; top: <%=(xywh[1] * scale)%>px; width: <%=(xywh[2] * scale)%>px; height: <%=(xywh[3] * scale)%>px;" id="bbox"></div>
+        <%
+        if(xywh.length>4){ //it's the new flavor of xywh that has a secret fifth parameter that records the width of the image
+        %>
+          <div style="left: <%=(xywh[0] * scale)%>px; top: <%=(xywh[1] * scale)%>px; width: <%=(xywh[2] * (xywh[4]/maWidth))%>px; height: <%=(xywh[3] * scale)%>px;" id="bbox"></div>
+        <%
+      }else{ //then it's the old flavor of xywh with no secrete extra parameters; just scale width by the same thing you're scaling height by
+          %>
+            <div style="left: <%=(xywh[0] * scale)%>px; top: <%=(xywh[1] * scale)%>px; width: <%=(xywh[2] * scale)%>px; height: <%=(xywh[3] * scale)%>px;" id="bbox"></div>
+          <%
+        }
+        %>
 		</div>
 
 	<%
