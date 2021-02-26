@@ -2,6 +2,7 @@
      import="org.ecocean.*,
 		org.ecocean.servlet.ServletUtilities,
 		javax.jdo.Query,
+    java.util.Arrays,
 		java.util.Iterator,
 		java.util.List,
 		org.json.JSONObject,
@@ -30,7 +31,7 @@ private static String encodeValue(String value) {
 
 <jsp:include page="../header.jsp" flush="true"/>
 
-<% int imgHeight = 500; %>
+<%int imgHeight = 500;%>
 
 <%
 
@@ -70,13 +71,13 @@ String clist = "";
 
 	#img-wrapper {
 	    overflow: hidden;
-	    height: <%=imgHeight%>px;
+      height: <%=imgHeight%>px;
 	    xfloat: right;
 	    position: relative;
 	}
 	img.asset {
-	    height: <%=imgHeight%>px;
-	    xposition: absolute;
+      height: <%=imgHeight%>px;
+      xposition: absolute;
 	}
 
 	#bbox {
@@ -123,7 +124,6 @@ $(document).ready(function() {
     <%
     if(iaClass!=null){
     %>
-
     $('#img-wrapper').on('mousemove', function(ev) {
         if (boxStart) {
             var w = Math.abs(ev.offsetX - boxStart[0]);
@@ -147,17 +147,20 @@ $(document).ready(function() {
         boxStart = false;
         $('.axis').hide();
     }).on('click', function(ev) {
+      let mainImgWidth = $('#main-img').width();
+      let widthScale = maWidth/mainImgWidth;
         if (boxStart) {
             var w = Math.abs(ev.offsetX - boxStart[0]);
             var h = Math.abs(ev.offsetY - boxStart[1]);
             var x = Math.min(boxStart[0], ev.offsetX);
             var y = Math.min(boxStart[1], ev.offsetY);
             var bbox = [
-                Math.floor(x / scale),
+                Math.floor(x * widthScale),
                 Math.floor(y / scale),
-                Math.floor(w / scale),
+                Math.floor(w * widthScale),
                 Math.floor(h / scale)
             ].join(',');
+            debugger;
             document.location.href = 'manualAnnotation.jsp' + document.location.search.replace(/bbox=[^&]+/, '') + '&bbox=' + bbox;
         } else {
             boxStart = [ev.offsetX, ev.offsetY];
@@ -311,6 +314,7 @@ try{
 	    //return;
 	}
 	double scale = imgHeight / ma.getHeight();
+  double maWidth = ma.getWidth();
 
 	%>
 
@@ -319,7 +323,9 @@ try{
 
 	<p>
 	MediaAsset <b><a title="<%=ma.toString()%>" target="_new" href="../obrowse.jsp?type=MediaAsset&id=<%=ma.getId()%>"><%=ma.getId()%></a></b>
-	<script>scale = <%=scale%>;
+	<script>
+        scale = <%=scale%>;
+        maWidth = <%=maWidth%>;
         var asset = <%=ma.sanitizeJson(request, new org.datanucleus.api.rest.orgjson.JSONObject(), true, myShepherd)%>;
 
 	function pulldownUpdate(el) {
@@ -345,12 +351,19 @@ try{
         }
 
         function drawFeature(imgEl, ft) {
+          console.log("deleteMe drawFeature entered");
             if (!imgEl || !ft || !ft.parameters || (ft.type != 'org.ecocean.boundingBox')) return;
             let f = $('<div title="' + ft.id + '" id="feature-' + ft.id + '" class="featurebox" />');
             let scale = imgEl.height / imgEl.naturalHeight;
+            console.log("deleteMe imgEl.width is: " + imgEl.width);
+            console.log("deleteMe imgEl.naturalWidth is: " + imgEl.naturalWidth);
+            console.log("deleteMe scale in drawFeature is: " + scale);
             let widthScale = imgEl.width / imgEl.naturalWidth;
-//console.info('mmmm scale=%f (ht=%d/%d)', scale, imgEl.height, imgEl.naturalHeight);
-            if (scale == 1) return;
+            console.log("deleteMe width is: " + ft.parameters.width);
+            console.log("deleteMe x is: " + ft.parameters.x);
+            console.log("deleteMe widthScale in drawFeature is: " + widthScale);
+            // console.info('mmmm scale=%f (ht=%d/%d)', scale, imgEl.height, imgEl.naturalHeight);
+            // if (scale == 1) return;
             imgEl.setAttribute('data-feature-drawn', true);
             f.css('width', (ft.parameters.width * widthScale) + 'px');
             f.css('height', (ft.parameters.height * scale) + 'px');
